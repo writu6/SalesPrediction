@@ -1,0 +1,266 @@
+# 1.1 Read the dataset we choose
+library(tidyverse)
+Superstore <- read_csv("Superstore_Dataset.csv")
+head(Superstore)
+dim(Superstore)
+
+# 1.2 The number of observations of the dataset
+dim(Superstore) # The dataset contains 9994 rows and 21 columns
+
+# 1.3 Names of fields of the dataset
+names(Superstore)
+
+# 1.4 Summary information of the dataset(Type/Content)
+summary(Superstore) # There are 21 pieces of information
+#                     provided in the dataset.
+
+# 1.5 Check if our dataset has missing values
+sum(is.na(Superstore)) # Our dataset does not have any missing values
+
+# For our project, we plan to use "Sales" as dependent variable,
+# Category, State, and Quantity as our independent variables
+
+# 1.6 Scopes, types, and components of data used in the project
+attach(Superstore)
+
+length(unique(Sales)) # There are 5825 Sales
+length(unique(Category)) # There are 3 types of Category in total
+length(unique(State)) # There are 49 types of State in total
+length(unique(Quantity)) # There are 14 Quantity
+
+print(class(Sales)) # Numeric
+print(class(Category)) # Character
+print(class(State)) # Character
+print(class(Quantity)) # Numeric
+print(class(Discount)) # Numeric
+
+as.factor(Sales)
+as.factor(Category)
+as.factor(State)
+as.factor(Quantity)
+
+# 1.7 Report on the top 3 most frequently ordered State and Category
+sort(table(State), decreasing = TRUE)[1:3] # The state of California generated the most orders,
+#                                            followed by New York and Texas. 
+sort(table(Category), decreasing = TRUE)[1:3] # Office Supplies is the best-selling
+#                                               product category, followed by Furniture and Technology. 
+
+
+# Part 2: Descriptive Statistics & Visualizations 
+
+# 2.1 Descriptive analytics for our first regression
+# 2.1.1 Calculating sum of Sales in each Category
+Sales_sum <- tapply(X = Sales, INDEX = Category, sum, na.rm = T)
+Sales_sum 
+
+# 2.1.2 Creating a bar plot for Sales_sum
+barplot(Sales_sum, main = "Sales in each Category", col="yellow",border = "skyblue",
+        xlab = "Category", ylab = "Sales", density = 10)
+# Conclusion: According to the plot, we know that products of Technology category
+# has the highest sales, followed by Furniture and Office Supply.
+
+
+# Part 3: Additional Descriptive Statistics
+# 3.1 Researching which product category has the most orders in various states.
+install.packages("ggthemes")
+
+library(ggplot2)
+library(ggthemes)
+
+g <- ggplot(Superstore, aes(x=State))
+g +
+  geom_bar(aes(fill = Category), position = position_stack(reverse = TRUE)) +
+  coord_flip() +
+  theme(legend.position = "top") 
+# According to the plot, we can see that regardless of State,
+# "Office Supplies" category has the most product orders.
+
+# 3.2 Comparing the total sales and total profits for each product category
+# 3.2.1 Calculating sum of Profits in each Category
+Profit_sum <- tapply(X = Profit, INDEX = Category, sum, na.rm = T)
+Profit_sum
+
+# 3.2.2 Combining the sum of Product Sales and Product Profits
+Integrated_sum <- cbind(Profit_sum, Sales_sum)
+Integrated_sum
+
+# 3.3.3 Creating a bar plot for Integrated_sum
+barplot(Integrated_sum, main = "Comparison of Sales & Profits", xlab = "Profits & Sales",col = c("skyblue", "orange","yellow"),
+        legend = rownames(Integrated_sum), beside = TRUE)
+# Because Profit = (Sales price - purchase price)* volume of Product,
+# According to the plot, we can see that products of Technology category
+# has both the highest Sales and Profits, but the sales volume of this category
+# only ranked in the second place, so we can say that products of Technology
+# have a relatively high Sales price or a low Purchase price.
+
+
+# 4.Data Processed
+# 4.1 Check duplicated data
+data_unique <- Superstore[!duplicated(Superstore), ]  
+dim(data_unique) # 9994 rows and 21 columns
+dim(Superstore) # 9994 rows and 21 columns, our dataset does not contain duplicated data
+
+# 4.2 Check outliers
+Discount_Outliers <- boxplot.stats(Superstore$Discount)$out
+table(Discount_Outliers) # The Discount attribute contains in total 856 outliers
+unique(Discount_Outliers)
+sum(Discount_Outliers)
+
+Sales_Outliers <- boxplot.stats(Superstore$Sales)$out
+table(Sales_Outliers)
+unique(Sales_Outliers)
+
+Quantity_Outlier <- boxplot.stats(Superstore$Quantity)$out
+table(Quantity_Outlier) # The Quantity attribute contains in total of 170 outliers
+unique(Quantity_Outlier)
+
+
+# 4.3 Replacing outliers with NULL and Mean value 
+Superstore3$Discount[Superstore3$Discount %in% boxplot.stats(Superstore3$Discount)$out] <- mean(Superstore3$Discount)
+Superstore3$Quantity[Superstore3$Quantity %in% boxplot.stats(Superstore3$Quantity)$out] <- NULL
+Superstore3$Sales[Superstore3$Sales %in% boxplot.stats(Superstore3$Sales)$out] <- mean(Superstore3$Sales)
+
+# 4.4 Check whether the outliers in the above defined columns are replaced or not
+
+
+
+
+
+
+# 4. Regression Information
+
+# Creating dummy variables for technology and Furniture
+Technology = ifelse(Category == 'Technology', '1', '0')
+Superstore2b = cbind(Superstore, Technology)
+
+Furniture = ifelse(Category == 'Furniture', '1', '0')
+Superstore2 = cbind(Superstore2b, Furniture)
+
+Office_Supplies = ifelse(Category== 'Office Supplies', '1', '0')
+Superstore3 = cbind(Superstore2, Office_Supplies)
+
+
+lm(Sales~Technology + Furniture, data = Superstore)
+#interpret below
+
+#-----------------------------
+View(Superstore3)
+attach(Superstore3)
+#
+#2. checking power of model
+lm.fit = lm(Superstore$Sales ~., data = Superstore)
+summary(lm.fit)
+
+lm.fit3 = lm(Superstore3$Sales ~.-Superstore3$Category, data = Superstore3)
+
+#lm4 current model
+lm4.fit = lm(Superstore3$Sales ~ Superstore3$Technology + Superstore3$Furniture + Superstore3$Office_Supplies,  data = Superstore3) # Check 1.	Sales = ??0 + ??1 Category + u
+summary(lm4.fit) #after handling outliers of Sales, R-squared improved from 0.05046 to 0.1852, improved
+view(Superstore3)
+
+#lm5.fit = lm(Sales~ Quantity + Discount + Category,  data = Superstore3)
+lm5.fit = lm(Superstore3$Sales~ Superstore3$Technology + Superstore3$Furniture + Superstore3$Office_Supplies + Superstore3$State, data = Superstore3) # check 2.	Sales = ??0 + ??1 Category + ??2 states + u
+summary(lm5.fit) # 0.1948 
+
+# lm6.fit = lm(Sales ~ Category + State + Discount, data = Superstore3)
+lm6.fit = lm(Superstore3$Sales~ Superstore3$Technology + Superstore3$Furniture + Superstore3$Office_Supplies + Superstore3$State + Superstore3$Discount, data = Superstore3) # check 3.	Sales = ??0 + ??1 Category + ??2 states + Disconut + u
+summary(lm6.fit) #0.1951, # 0.2211
+
+
+
+#-------------------------------------------
+
+#Random Regression
+#install.packages("randomForest")
+#install.packages("varImp")
+
+library(randomForest)
+library(varImp)
+
+#Random forest fitting for all the attributes
+rf.fit<- randomForest(Sales ~ ., data=Superstore, ntree=1000,mtry=3,
+                      keep.forest=FALSE, importance=TRUE)
+
+print(rf.fit)
+summary(rf.fit)
+
+#Mean of squared residuals: 183146.7
+#% Var explained: 52.85
+
+#random forest fitting for all attributes with dummy data for the attribute "category"
+
+rf_cat.fit<- randomForest(Sales ~ ., data=Superstore3, ntree=10,
+                      keep.forest=FALSE, importance=TRUE) # This one should delete"Category", see below
+rf_cat.fit<- randomForest(Superstore3$Sales ~ . -Superstore3$Category, data=Superstore3, ntree=10,
+                          keep.forest=FALSE, importance=TRUE)
+
+
+print(rf_cat.fit)
+#Mean of squared residuals: 3774.161
+#% Var explained: 71.88
+summary(rf_cat.fit)
+
+#comparing the random model with the linear models
+
+#comapring with lm4
+rf_lm.fit = randomForest(Superstore3$Sales ~ Superstore3$Technology + Superstore3$Furniture + Superstore3$Office_Supplies, data = Superstore3, mtry=2,ntree=500,
+                         keep.forest=FALSE, importance=TRUE)
+print(rf_lm.fit)
+summary(rf_lm.fit)
+
+#comapring with lm5
+
+rf_lm3.fit = randomForest(Superstore3$Sales~ Superstore3$Technology + Superstore3$Furniture + Superstore3$Office_Supplies + Superstore3$State,  data = Superstore3, mtry=4 ,ntree=1000,
+                          keep.forest=FALSE, importance=TRUE)
+print(rf_lm3.fit)
+summary(rf_lm3.fit)
+
+#comapring with lm6
+
+rf_lm4.fit = randomForest(Superstore3$Sales~ Superstore3$Technology + Superstore3$Furniture + Superstore3$Office_Supplies + Superstore3$State + Superstore3$Discount,  data = Superstore3, mtry=4 ,ntree=1000,
+                           keep.forest=FALSE, importance=TRUE)
+
+print(rf_lm4.fit)
+summary(rf_lm4.fit)
+
+
+
+
+
+
+
+### Visualize variable importance ----------------------------------------------
+
+# Get variable importance from the model fit for Superstore
+ImpData <- as.data.frame(importance(rf.fit))
+ImpData$Var.Names <- row.names(ImpData)
+
+ggplot(ImpData, aes(x=Var.Names, y=`%IncMSE`)) +
+  geom_segment( aes(x=Var.Names, xend=Var.Names, y=0, yend=`%IncMSE`), color="chocolate") +
+  geom_point(aes(size = IncNodePurity), color="skyblue", alpha=0.6) +
+  theme_light() +
+  coord_flip() +
+  theme(
+    legend.position="bottom",
+    panel.grid.major.y = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+
+
+# Get variable importance from the model fit for Superstore3
+ImpData <- as.data.frame(importance(rf_cat.fit))
+ImpData$Var.Names <- row.names(ImpData)
+
+ggplot(ImpData, aes(x=Var.Names, y=`%IncMSE`)) +
+  geom_segment( aes(x=Var.Names, xend=Var.Names, y=0, yend=`%IncMSE`), color="chocolate") +
+  geom_point(aes(size = IncNodePurity), color="skyblue", alpha=0.6) +
+  theme_light() +
+  coord_flip() +
+  theme(
+    legend.position="bottom",
+    panel.grid.major.y = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+
